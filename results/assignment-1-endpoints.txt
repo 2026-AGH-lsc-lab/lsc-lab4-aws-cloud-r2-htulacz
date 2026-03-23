@@ -1,0 +1,39 @@
+[ec2-user@ip-172-31-75-103 lsc-lab4-aws-cloud-r2-htulacz]$ curl -X POST -H "Content-Type: application/json" -d @loadtest/query.json \
+    http://44.199.191.91:8080/search
+{"instance_id":"d990f2ef7153","query_time_ms":27.631,"results":[{"distance":12.001459121704102,"index":35859},{"distance":12.059946060180664,"index":24682},{"distance":12.487079620361328,"index":35397},{"distance":12.489519119262695,"index":20160},{"distance":12.499402046203613,"index":30454}]}
+
+[ec2-user@ip-172-31-75-103 lsc-lab4-aws-cloud-r2-htulacz]$ curl -X POST -H "Content-Type: application/json" -d @loadtest/query.json \
+    http://lsc-knn-alb-1785008408.us-east-1.elb.amazonaws.com/search
+{"instance_id":"ip-172-31-22-61.ec2.internal","query_time_ms":24.251,"results":[{"distance":12.001459121704102,"index":35859},{"distance":12.059946060180664,"index":24682},{"distance":12.487079620361328,"index":35397},{"distance":12.489519119262695,"index":20160},{"distance":12.499402046203613,"index":30454}]}
+
+[ec2-user@ip-172-31-75-103 lsc-lab4-aws-cloud-r2-htulacz]$ aws lambda invoke --function-name lsc-knn-zip \
+    --cli-binary-format raw-in-base64-out \
+    --payload "$(python3 -c 'import json; q=json.load(open("loadtest/query.json")); print(json.dumps({"body": json.dumps(q)}))')" \
+    /tmp/out.json
+cat /tmp/out.json
+{
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+}
+{"statusCode": 200, "headers": {"Content-Type": "application/json", "X-Server-Time-Ms": "36.387", "X-Instance-Id": "2026/03/23/[$LATEST]935b45f4b75d47c3bbbdb0d2f53daa02", "X-Cold-Start": "true"}, "body": "{\"results\": [{\"index\": 35859, \"distance\": 12.001459121704102}, {\"index\": 24682, \"distance\": 12.059946060180664}, {\"index\": 35397, \"distance\": 12.487079620361328}, {\"index\": 20160, \"distance\": 12.489519119262695}, {\"index\": 30454, \"distance\": 12.499402046203613}], \"query_time_ms\": 36.387, \"instance_id\": \"2026/03/23/[$LATEST]935b45f4b75d47c3bbbdb0d2f53daa02\", \"cold_start\": true}"}[ec2-user@ip-172-31-75-103 lsc-lab4-aws-cloud-r2-htulacz]$ bash deploy/03-lambda-container.sh
+Config loaded: ACCOUNT_ID=654654582468, REGION=us-east-1
+=== Step 3: Lambda Container Image Deployment ===
+Creating Lambda function (container)...
+arn:aws:lambda:us-east-1:654654582468:function:lsc-knn-container
+Waiting for function to become active...
+Creating Function URL...
+{
+    "Statement": "{\"Sid\":\"FunctionURLInvoke\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Action\":\"lambda:InvokeFunctionUrl\",\"Resource\":\"arn:aws:lambda:us-east-1:654654582468:function:lsc-knn-container\",\"Condition\":{\"StringEquals\":{\"lambda:FunctionUrlAuthType\":\"AWS_IAM\"}}}"
+}
+=== Lambda Container done. Function URL: https://sk64hnlcwhvalvhkqstnwfy7j40wznfo.lambda-url.us-east-1.on.aws/ ===
+
+[ec2-user@ip-172-31-75-103 lsc-lab4-aws-cloud-r2-htulacz]$ aws lambda invoke --function-name lsc-knn-container \
+    --cli-binary-format raw-in-base64-out \
+    --payload "$(python3 -c 'import json; q=json.load(open("loadtest/query.json")); print(json.dumps({"body": json.dumps(q)}))')" \
+    /tmp/out.json
+cat /tmp/out.json
+{
+    "StatusCode": 200,
+    "ExecutedVersion": "$LATEST"
+}
+{"statusCode": 200, "headers": {"Content-Type": "application/json", "X-Server-Time-Ms": "79.655", "X-Instance-Id": "2026/03/23/[$LATEST]d2c510c2e693485a927dd4f70dcb0830", "X-Cold-Start": "true"}, "body": "{\"results\": [{\"index\": 35859, \"distance\": 12.001459121704102}, {\"index\": 24682, \"distance\": 12.059946060180664}, {\"index\": 35397, \"distance\": 12.487079620361328}, {\"index\": 20160, \"distance\": 12.489519119262695}, {\"index\": 30454, \"distance\": 12.499402046203613}], \"query_time_ms\": 79.655, \"instance_id\": \"2026/03/23/[$LATEST]d2c510c2e693485a927dd4f70dcb0830\", \"cold_start\": true}"}
